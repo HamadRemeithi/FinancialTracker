@@ -1,0 +1,41 @@
+# Python build artefacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# VS Code settings
+.vscode/
+
+# PDF and data files
+*.pdf
+*.json
+
+# PyInstaller output
+*.exe
+*.dll
+*.manifest
+*.spec
+
+# Misc
+*.log
+*.tmp
+*.bak
+
+# Ignore virtual environments
+venv/
+.env/
+
+# OS files
+.DS_Store
+Thumbs.db
