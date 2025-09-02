@@ -4,11 +4,12 @@ import json
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
     QFormLayout, QLineEdit, QRadioButton, QButtonGroup, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QScrollArea, QTextEdit
+    QTableWidget, QTableWidgetItem, QMessageBox, QScrollArea, QTextEdit, QComboBox
 )
 from PySide6.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from fpdf import FPDF
 
 class FinanceApp(QMainWindow):
@@ -19,6 +20,73 @@ class FinanceApp(QMainWindow):
         self.json_file = "finance_data.json"
         self.init_ui()
         self.load_data()
+
+        # Apply modern dark stylesheet
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #232629;
+            }
+            QTabWidget::pane {
+                border: 1px solid #444;
+                border-radius: 8px;
+                background: #232629;
+            }
+            QTabBar::tab {
+                background: #232629;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 8px;
+                padding: 8px 20px;
+                margin: 2px;
+                font-size: 15px;
+            }
+            QTabBar::tab:selected {
+                background: #2d3136;
+                color: #00c3ff;
+                font-weight: bold;
+            }
+            QLabel {
+                color: #fff;
+                font-size: 14px;
+            }
+            QPushButton {
+                background-color: #00c3ff;
+                color: #fff;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #009ad6;
+            }
+            QLineEdit, QComboBox {
+                background: #2d3136;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 6px;
+                padding: 6px;
+                font-size: 14px;
+            }
+            QTableWidget {
+                background: #232629;
+                color: #fff;
+                gridline-color: #444;
+                font-size: 13px;
+                border-radius: 8px;
+            }
+            QHeaderView::section {
+                background: #2d3136;
+                color: #00c3ff;
+                font-weight: bold;
+                border: none;
+                padding: 8px;
+            }
+            QTableWidget::item:selected {
+                background: #00c3ff;
+                color: #232629;
+            }
+        """)
 
     def init_ui(self):
         self.tabs = QTabWidget()
@@ -48,7 +116,9 @@ class FinanceApp(QMainWindow):
         # Debt Type
         self.debt_type_group = QButtonGroup()
         self.rb_personal = QRadioButton("Personal")
+        self.rb_personal.setStyleSheet("color: #ffffff;")
         self.rb_housing = QRadioButton("Housing")
+        self.rb_housing.setStyleSheet("color: #ffffff;")
         self.rb_personal.setChecked(True)
         self.debt_type_group.addButton(self.rb_personal)
         self.debt_type_group.addButton(self.rb_housing)
@@ -111,6 +181,72 @@ class FinanceApp(QMainWindow):
 
         self.growth_canvas = None
 
+        # --- Binance Wallet Dashboard Tab ---
+        self.tab_binance = QWidget()
+        self.tabs.addTab(self.tab_binance, "Binance Dashboard")
+        binance_layout = QVBoxLayout(self.tab_binance)
+
+
+        # Multiple wallet support
+        self.wallet_name_entry = QLineEdit()
+        self.wallet_name_entry.setPlaceholderText("Wallet Name")
+        self.api_key_entry = QLineEdit()
+        self.api_secret_entry = QLineEdit()
+        self.api_secret_entry.setEchoMode(QLineEdit.Password)
+        self.btn_save_api = QPushButton("Save Wallet")
+        self.wallet_select_combo = QComboBox()
+        self.btn_load_wallet = QPushButton("Load Selected Wallet")
+
+        api_form = QFormLayout()
+        api_form.addRow("Wallet Name", self.wallet_name_entry)
+        api_form.addRow("API Key", self.api_key_entry)
+        api_form.addRow("API Secret", self.api_secret_entry)
+        api_form.addRow(self.btn_save_api)
+        api_form.addRow("Select Wallet", self.wallet_select_combo)
+        api_form.addRow(self.btn_load_wallet)
+        api_form_widget = QWidget()
+        api_form_widget.setLayout(api_form)
+        binance_layout.addWidget(api_form_widget)
+
+
+        # --- Binance Dashboard UI ---
+        # --- Sleek Binance Dashboard UI ---
+        self.wallet_summary_label = QLabel("Total Holdings: AED 0.00 | Wallet PnL: 0.00%")
+        self.wallet_summary_label.setStyleSheet("font-weight: bold; font-size: 18px; margin-bottom: 16px; color: #00c3ff;")
+        binance_layout.addWidget(self.wallet_summary_label)
+
+        self.wallet_table = QTableWidget()
+        self.wallet_table.setColumnCount(6)
+        self.wallet_table.setHorizontalHeaderLabels([
+            "Asset", "Total", "Price (USD)", "Price (AED)", "Daily PnL (%)", "Holding Value (AED)"
+        ])
+        self.wallet_table.horizontalHeader().setStretchLastSection(True)
+        self.wallet_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.wallet_table.setAlternatingRowColors(True)
+        self.wallet_table.setStyleSheet("alternate-background-color: #2d3136; background-color: #232629;")
+        binance_layout.addWidget(self.wallet_table)
+
+        # Loading animation
+        self.loading_label = QLabel("")
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setStyleSheet("font-size: 15px; color: #00c3ff; margin: 10px;")
+        binance_layout.addWidget(self.loading_label)
+
+        # Refresh button
+        self.btn_refresh_wallet = QPushButton("Refresh Wallet")
+        binance_layout.addWidget(self.btn_refresh_wallet)
+
+        # Signals for API key save and wallet refresh
+
+        self.btn_save_api.clicked.connect(self.save_binance_wallet)
+        self.btn_load_wallet.clicked.connect(self.load_selected_wallet)
+        self.btn_refresh_wallet.clicked.connect(self.refresh_wallet)
+
+        self.wallets = self.load_all_wallets()
+        self.update_wallet_combo()
+        self.current_wallet = None
+
+
         # --- Signals ---
         for entry in ["Salary", "Phone Bill", "Petrol Money", "Annual Rent", "Living Expenses", "Debt Amount"]:
             self.entries[entry].textChanged.connect(self.update_savings_pct)
@@ -123,6 +259,137 @@ class FinanceApp(QMainWindow):
         self.btn_delete.clicked.connect(self.delete_entry)
         self.btn_clear.clicked.connect(self.clear_database)
         self.btn_growth.clicked.connect(self.show_growth_graph)
+
+
+
+    def save_binance_wallet(self):
+        # Save wallet credentials with a name
+        name = self.wallet_name_entry.text().strip()
+        api_key = self.api_key_entry.text().strip()
+        api_secret = self.api_secret_entry.text().strip()
+        if not name or not api_key or not api_secret:
+            QMessageBox.warning(self, "Warning", "Please enter wallet name, API key, and secret.")
+            return
+        self.wallets[name] = {"api_key": api_key, "api_secret": api_secret}
+        try:
+            with open("binance_wallets.json", "w") as f:
+                json.dump(self.wallets, f)
+            QMessageBox.information(self, "Success", f"Wallet '{name}' saved.")
+            self.update_wallet_combo()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save wallet: {e}")
+
+    def load_all_wallets(self):
+        # Load all wallets from file
+        try:
+            with open("binance_wallets.json", "r") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def update_wallet_combo(self):
+        self.wallet_select_combo.clear()
+        for name in self.wallets.keys():
+            self.wallet_select_combo.addItem(name)
+
+    def load_selected_wallet(self):
+        name = self.wallet_select_combo.currentText()
+        if name in self.wallets:
+            self.current_wallet = self.wallets[name]
+            QMessageBox.information(self, "Loaded", f"Loaded wallet: {name}")
+        else:
+            QMessageBox.warning(self, "Warning", "Selected wallet not found.")
+
+    def refresh_wallet(self):
+        self.loading_label.setText("Fetching wallet data... Please wait.")
+        QApplication.processEvents()
+        # Use selected wallet
+        if not self.current_wallet:
+            self.loading_label.setText("")
+            self.wallet_summary_label.setText("No wallet selected. Please select a wallet above.")
+            self.wallet_table.setRowCount(0)
+            return
+        api_key = self.current_wallet.get("api_key")
+        api_secret = self.current_wallet.get("api_secret")
+        try:
+            import requests
+            from urllib.parse import urlencode
+            import hmac, hashlib, time
+            base_url = "https://api.binance.com"
+            endpoint = "/api/v3/account"
+            timestamp = int(time.time() * 1000)
+            query = urlencode({"timestamp": timestamp})
+            signature = hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+            headers = {"X-MBX-APIKEY": api_key}
+            url = f"{base_url}{endpoint}?{query}&signature={signature}"
+            resp = requests.get(url, headers=headers)
+            if resp.status_code != 200:
+                self.loading_label.setText("")
+                self.wallet_summary_label.setText(f"Failed to fetch wallet: {resp.text}")
+                self.wallet_table.setRowCount(0)
+                return
+            data = resp.json()
+            balances = [b for b in data["balances"] if float(b["free"]) > 0 or float(b["locked"]) > 0]
+            if not balances:
+                self.loading_label.setText("")
+                self.wallet_summary_label.setText("No assets found in wallet.")
+                self.wallet_table.setRowCount(0)
+                return
+
+            # Get USD-AED conversion rate
+            try:
+                forex_resp = requests.get("https://api.exchangerate.host/latest?base=USD&symbols=AED")
+                usd_to_aed = forex_resp.json()["rates"]["AED"] if forex_resp.status_code == 200 else 3.67
+            except Exception:
+                usd_to_aed = 3.67  # fallback
+
+            # Prepare table data and summary
+            self.wallet_table.setRowCount(0)
+            total_aed = 0.0
+            total_pnl = 0.0
+            asset_count = 0
+            for b in balances:
+                asset = b['asset']
+                free = float(b['free'])
+                locked = float(b['locked'])
+                total = free + locked
+                if asset == "USDT":
+                    price = 1.0
+                    price_aed = price * usd_to_aed
+                    daily_pnl = 0.0
+                else:
+                    symbol = asset + "USDT"
+                    ticker_url = f"{base_url}/api/v3/ticker/24hr?symbol={symbol}"
+                    ticker_resp = requests.get(ticker_url)
+                    if ticker_resp.status_code == 200:
+                        ticker = ticker_resp.json()
+                        price = float(ticker.get("lastPrice", 0))
+                        price_aed = price * usd_to_aed
+                        daily_pnl = float(ticker.get("priceChangePercent", 0))
+                    else:
+                        price = 0.0
+                        price_aed = 0.0
+                        daily_pnl = 0.0
+                holding_value_aed = total * price_aed
+                total_aed += holding_value_aed
+                total_pnl += daily_pnl
+                asset_count += 1
+                row = self.wallet_table.rowCount()
+                self.wallet_table.insertRow(row)
+                self.wallet_table.setItem(row, 0, QTableWidgetItem(asset))
+                self.wallet_table.setItem(row, 1, QTableWidgetItem(f"{total:.6f}"))
+                self.wallet_table.setItem(row, 2, QTableWidgetItem(f"${price:.2f}"))
+                self.wallet_table.setItem(row, 3, QTableWidgetItem(f"AED {price_aed:.2f}"))
+                self.wallet_table.setItem(row, 4, QTableWidgetItem(f"{daily_pnl:.2f}%"))
+                self.wallet_table.setItem(row, 5, QTableWidgetItem(f"AED {holding_value_aed:.2f}"))
+
+            avg_pnl = total_pnl / asset_count if asset_count > 0 else 0.0
+            self.wallet_summary_label.setText(f"Total Holdings: AED {total_aed:,.2f} | Wallet PnL: {avg_pnl:.2f}%")
+            self.loading_label.setText("")
+        except Exception as e:
+            self.loading_label.setText("")
+            self.wallet_summary_label.setText(f"Error: {e}")
+            self.wallet_table.setRowCount(0)
 
     def load_data(self):
         if os.path.exists(self.json_file):
@@ -244,6 +511,7 @@ class FinanceApp(QMainWindow):
         except Exception:
             self.savings_pct_label.setText("0.00")
 
+
     def show_logs(self):
         if not self.data:
             QMessageBox.information(self, "Info", "No logs to show.")
@@ -273,7 +541,7 @@ class FinanceApp(QMainWindow):
         if not self.data:
             QMessageBox.information(self, "Info", "No data to plot.")
             return
-        months = [d["Month"] for d in self.data]                                     
+        months = [d["Month"] for d in self.data]
         expenses = [d["Expenses"] for d in self.data]
         savings = [d["Savings"] for d in self.data]
         invested = [d["Invested"] for d in self.data]
@@ -292,12 +560,17 @@ class FinanceApp(QMainWindow):
         ax.grid(True)
         plt.tight_layout()
 
+        # Remove old canvas if exists
+        if hasattr(self, 'chart_canvas') and self.chart_canvas is not None:
+            self.chart_canvas.setParent(None)
+            self.chart_canvas = None
+
         self.chart_win = QWidget()
         self.chart_win.setWindowTitle("Finance Chart")
         layout = QVBoxLayout()
         self.chart_win.setLayout(layout)
-        canvas = FigureCanvas(fig)
-        layout.addWidget(canvas)
+        self.chart_canvas = FigureCanvas(fig)
+        layout.addWidget(self.chart_canvas)
         self.chart_win.resize(700, 500)
         self.chart_win.show()
         self.chart_win.raise_()
@@ -330,10 +603,15 @@ class FinanceApp(QMainWindow):
             ax.legend()
             ax.grid(True)
             plt.tight_layout()
-            if self.growth_canvas:
-                self.growth_canvas.setParent(None)
+            # Remove all previous FigureCanvas widgets from layout except the form
+            layout = self.tab_growth.layout()
+            for i in reversed(range(layout.count())):
+                widget = layout.itemAt(i).widget()
+                if isinstance(widget, FigureCanvasQTAgg):
+                    layout.removeWidget(widget)
+                    widget.setParent(None)
             self.growth_canvas = FigureCanvas(fig)
-            self.tab_growth.layout().addWidget(self.growth_canvas)
+            layout.addWidget(self.growth_canvas)
             self.final_value_label.setText(f"{growth[-1]:.2f}" if growth else "0.00")
             self.total_invested_label.setText(f"{invested_cumulative[-1]:.2f}" if invested_cumulative else "0.00")
         except Exception as e:
@@ -357,8 +635,11 @@ class FinanceApp(QMainWindow):
             QMessageBox.critical(self, "Error", f"PDF export failed: {e}")
 
 if __name__ == "__main__":
+    from ui import setup_main_tabs
     app = QApplication(sys.argv)
-    win = FinanceApp()
-    win.resize(900, 700)
+    win = QMainWindow()
+    win.setWindowTitle("Personal Finance Tracker (Qt)")
+    setup_main_tabs(win)
+    win.resize(700, 900)
     win.show()
     sys.exit(app.exec())
