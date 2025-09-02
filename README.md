@@ -9,7 +9,6 @@ This project is a personal finance tracking application:
 
 Install dependencies:
 pip install matplotlib fpdf PySide6
-```
 
 ## Usage
 - **Stable Qt version:**
